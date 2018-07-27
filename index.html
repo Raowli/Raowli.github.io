@@ -82,7 +82,7 @@ d3.tsv("median.tsv", function(error, data) {
 
   data.forEach(function(d) {
     d.date = parseDate(d.date);
-    d[" Chinese"] = +d["Chinese"];
+    d["Chinese"] = +d["Chinese"];
     d["Indian"]  = +d["Indian"];
     d["Malay"]  = +d["Malay"];
   });
