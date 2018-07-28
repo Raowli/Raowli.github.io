@@ -1,148 +1,280 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<style>
+<html>
+  <head>
+    <meta charset="utf-8">
 
-body {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  margin: auto;
-  position: relative;
-  width: 960px;
-}
+    <!-- External stylesheets -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/jquery-ui.theme.min.css">
+    <link rel="stylesheet" href="css/jquery-ui.structure.min.css">
 
-text {
-  font: 10px sans-serif;
-}
+    <!-- Custom styling -->
+    <style>
+    #chart-area svg {
+      margin:auto;
+      display:inherit;
+    }
 
-.axis path,
-.axis line {
-  fill: none;
-  stroke: #000;
-  shape-rendering: crispEdges;
-}
+    .money-cell { text-align: right; }
+    h2 { text-align: center; }
 
-.x.axis path {
-  display: none;
-}
+    #leg1 { background-color: #66c2a5; }
+    #leg2 { background-color: #fc8d62; }
+    #leg3 { background-color: #8da0cb; }
+    #leg4 { background-color: #e78ac3; }
+    #leg5 { background-color: #a6d854; }
+    #avLeg { background-color: grey; }
 
-.line {
-  fill: none;
-  stroke: steelblue;
-  stroke-width: 1.5px;
-}
+    @media screen and (min-width: 768px) {
+      table { margin-top: 100px; }
+    }
 
-form {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-}
+    @media screen and (min-width: 768px) {
+      table { margin-top: 100px; }
+    }
 
-</style>
-<form>
-  <label><input type="radio" name="ethnicity" value="Chinese" checked> Chinese</label>
-  <label><input type="radio" name="ethnicity" value="Indian"> Indian</label>
-</form>
-<script src="//d3js.org/d3.v3.min.js"></script>
-<script>
+    #page-main { margin-top: 10px; }
 
-var margin = {top: 20, right: 80, bottom: 30, left: 50},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+    #controls { margin-bottom: 20px; }
 
-var ethnicity = "Chinese",
-    parseDate = d3.time.format("%Y").parse;
+    #play-button {
+      margin-top: 10px;
+      width: 100px;
+    }
 
-var x = d3.time.scale()
-    .range([0, width]);
+    #slider-div {
+      width:300px;
+      float:right;
+    }
+    </style>
+  </head>
+  <body>
+    <h2>Year: <span id="year"></span></h2>
 
-var y = d3.scale.linear()
-    .range([height, 0]);
+    <div class="container" id="page-main">
+      <div id="controls" class="row">
+        <div class="col-md-12">
+          <button id="play-button" class="btn btn-primary">Play</button>
+          <div id="slider-div">
+            <label>Year: <span id="year-label"></span></label>
+            <div id="date-slider"></div>
+          </div>
+        </div>
+      </div>
 
-var xAxis = d3.svg.axis()
-    .scale(x)
-    .orient("bottom");
+      <div class="row">
+        <div class="col-md-7">
+          <div id="chart-area"></div>
+        </div>
 
-var yAxis = d3.svg.axis()
-    .scale(y)
-    .orient("left");
+        <div class="col-md-5">
+          <table class="table">
+            <tbody>
+              <tr>
+                <th></th>
+                <th>Income Bracket</th>
+                <th>Household Income (2015 dollars)</th>
+              </tr>
+              <tr>
+                <td id="leg5"></td>
+                <td>Highest 20%</td>
+                <td class="money-cell"><span id="fig5"></span></td>
+              </tr>
+              <tr>
+                <td id="leg4"></td>
+                <td>Second-Highest 20%</td>
+                <td class="money-cell"><span id="fig4"></span></td>
+              </tr>
+              <tr>
+                <td id="leg3"></td>
+                <td>Middle 20%</td>
+                <td class="money-cell"><span id="fig3"></span></td>
+              </tr>
+              <tr>
+                <td id="leg2"></td>
+                <td>Second-Lowest 20%</td>
+                <td class="money-cell"><span id="fig2"></span></td>
+              </tr>
+              <tr>
+                <td id="leg1"></td>
+                <td>Lowest 20%</td>
+                <td class="money-cell"><span id="fig1"></span></td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td id="avLeg"></td>
+                <th>Average</th>
+                <th class="money-cell"><span id="avFig"></span></th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
 
-var line = d3.svg.line()
-    .interpolate("basis")
-    .x(function(d) { return x(d.date); })
-    .y(function(d) { return y(d[ethnicity]); });
+    <!-- External JS libraries -->
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/jquery-ui.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
 
-var svg = d3.select("body").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    <!-- Our JS code -->
+    <script>
+      const width = 540;
+      const height = 540;
+      const radius = Math.min(width, height) / 2;
 
-d3.tsv("median2.tsv", function(error, data) {
-  if (error) throw error;
+      const svg = d3.select("#chart-area")
+        .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+        .append("g")
+          .attr("transform", `translate(${width / 2}, ${height / 2})`);
 
-  data.forEach(function(d) {
-    d.date = parseDate(d.date);
-    d["Chinese"] = +d["Chinese"];
-    d["Indian"]  = +d["Indian"];
-  });
+      const color = d3.scaleOrdinal(["#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854","#ffd92f"]);
 
-  x.domain([data[0].date, data[data.length - 1].date]);
-  y.domain(d3.extent(data, function(d) { return d[ethnicity]; }));
+      const pie = d3.pie()
+        .value(1)
+        .sort(null);
 
-  svg.append("g")
-      .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(xAxis);
+      const arc = d3.arc()
+        .innerRadius(0);
 
-  svg.append("g")
-      .attr("class", "y axis")
-      .call(yAxis)
-    .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("Median Age");
+      function prepareData(d){
+        return {
+          name: d.year,
+          average: parseInt(d.average),
+          values: [
+            {
+              name: "first",
+              value: parseInt(d["1"])
+            },
+            {
+              name: "second",
+              value: parseInt(d["2"])
+            },
+            {
+              name: "third",
+              value: parseInt(d["3"])
+            },
+            {
+              name: "fourth",
+              value: parseInt(d["4"])
+            },
+            {
+              name: "fifth",
+              value: parseInt(d["5"])
+            }
+          ]
+        }
+      }
 
-  svg.append("path")
-      .datum(data)
-      .attr("class", "line")
-      .attr("d", line);
+      function arcTween(a) {
+        const i = d3.interpolate(this._current, a);
+        this._current = i(1);
+        return t => arc(i(t));
+      }
 
-  svg.append("text")
-      .datum(data[data.length - 1])
-      .attr("class", "label")
-      .attr("transform", transform)
-      .attr("x", 3)
-      .attr("dy", ".35em")
-      .text(ethnicity);
+      d3.csv("data/incomes.csv", prepareData).then(data => {
+        data = data.reverse();
 
-  d3.selectAll("input").on("change", change);
+        const radiusScale = d3.scaleSqrt()
+          .domain([0, data[49].values[4].value])
+          .range([0, Math.min(width, height) / 2]);
 
-  var timeout = setTimeout(function() {
-    d3.select("input[value=\"Indian\"]").property("checked", true).each(change);
-  }, 2000);
+        function update(data) {
+          updateHTML(data);
 
-  function change() {
-    clearTimeout(timeout);
+          arc.outerRadius(d => radiusScale(d.data.value));
 
-    ethnicity = this.value;
+          // JOIN
+          const path = svg.selectAll("path")
+            .data(pie(data.values));
 
-    // First transition the line & label to the new ethnicity.
-    var t0 = svg.transition().duration(750);
-    t0.selectAll(".line").attr("d", line);
-    t0.selectAll(".label").attr("transform", transform).text(ethnicity);
+          // UPDATE
+          path.transition().duration(200).attrTween("d", arcTween);
 
-    // Then transition the y-axis.
-    y.domain(d3.extent(data, function(d) { return d[ethnicity]; }));
-    var t1 = t0.transition();
-    t1.selectAll(".line").attr("d", line);
-    t1.selectAll(".label").attr("transform", transform);
-    t1.selectAll(".y.axis").call(yAxis);
-  }
+          // ENTER
+          path.enter().append("path")
+            .attr("fill", (d, i) => color(i))
+            .attr("d", arc)
+            .attr("stroke", "white")
+            .attr("stroke-width", "2px")
+            .each(function(d) { this._current = d; });
 
-  function transform(d) {
-    return "translate(" + x(d.date) + "," + y(d[ethnicity]) + ")";
-  }
-});
+          svg.select(".averageLine").transition().duration(200)
+            .attr("r", radiusScale(data.average));
+        }
 
-</script>
+        let time = 0;
+        let interval;
+
+        function step() {
+          update(data[time]);
+          time = (time == 49) ? 0 : time + 1;
+        }
+
+        $("#play-button").on("click", function() {
+          const button = $(this);
+          if (button.text() === "Play"){
+            button.text("Pause");
+            interval = setInterval(step, 200);
+          } else {
+            button.text("Play");
+            clearInterval(interval);
+          }
+        });
+
+        $("#date-slider").slider({
+          max: 49,
+          min: 0,
+          step: 1,
+          slide: (event, ui) => {
+            time = ui.value;
+            update(data[time]);
+          }
+        });
+
+        update(data[0]);
+
+        data[0].values.forEach((d, i) => {
+          svg.append("circle")
+            .attr("fill", "none")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", radiusScale(d.value))
+            .attr("stroke", color(i))
+            .attr("stroke-dasharray", "4,4");
+        });
+
+        svg.append("circle")
+          .attr("class", "averageLine")
+          .attr("fill", "none")
+          .attr("cx", 0)
+          .attr("cy", 0)
+          .attr("stroke", "grey")
+          .attr("stroke-width", "2px");
+
+          // Update slider position
+          $("#date-slider").slider("value", time);
+      });
+
+      function updateHTML(data) {
+        // Update title
+        $("#year").text(data.name);
+
+        // Update slider label
+        $("#year-label").text(data.name);
+
+        // Update table values
+        $("#fig1").html(data.values[0].value.toLocaleString());
+        $("#fig2").html(data.values[1].value.toLocaleString());
+        $("#fig3").html(data.values[2].value.toLocaleString());
+        $("#fig4").html(data.values[3].value.toLocaleString());
+        $("#fig5").html(data.values[4].value.toLocaleString());
+        $("#avFig").html(data.average.toLocaleString());
+      }
+    </script>
+  </body>
+</html>
