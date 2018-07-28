@@ -40,7 +40,6 @@ form {
 <form>
   <label><input type="radio" name="ethnicity" value="Chinese" checked> Chinese</label>
   <label><input type="radio" name="ethnicity" value="Indian"> Indian</label>
-  <label><input type="radio" name="ethnicity" value="Malay"> Malay</label>
 </form>
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script>
@@ -84,7 +83,6 @@ d3.tsv("median.tsv", function(error, data) {
     d.date = parseDate(d.date);
     d["Chinese"] = +d["Chinese"];
     d["Indian"]  = +d["Indian"];
-    d["Malay"]  = +d["Malay"];
   });
 
   x.domain([data[0].date, data[data.length - 1].date]);
@@ -121,7 +119,7 @@ d3.tsv("median.tsv", function(error, data) {
   d3.selectAll("input").on("change", change);
 
   var timeout = setTimeout(function() {
-    d3.select("input[value=\"Malay\"]").property("checked", true).each(change);
+    d3.select("input[value=\"Indian\"]").property("checked", true).each(change);
   }, 2000);
 
   function change() {
